@@ -20,7 +20,6 @@ This repository contains the Python implementation of the neural network model p
 
 - `model/`: Contains the neural network classes defining modules (`BCPNN`, `kWTA`, `BinaryModule`, `ThresholdCell`, etc.), and the model architecture (`AmygdalaEngrams` in file model.py).
 - `utils/`: Helper scripts, including functions for generating patterns, computing similarity metrics, and managing simulation phases.
-- `simulations/`: Contains scripts to run and reproduce simulations from our manuscript.
 - `requirements.txt`: Lists required Python packages.
 
 ## Installation and Setup
