@@ -58,7 +58,7 @@ def amy_show_fear_generalization():
     # Then do the same but with extinction in context A.
     # Then plot the BA_P and BA_I activities over time, for each similarity context and context A.
     similarities = [0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.925, 0.95, 0.975]
-    num_runs = 10
+    num_runs = 1
 
     num_accustom_trials = 0
     num_acquisition_trials = 20
@@ -219,7 +219,7 @@ def amy_show_fear_extinction_AA():
     num_acquisition_trials = 40
     num_extinction_trials = 100
     num_trials = num_acquisition_trials + num_extinction_trials
-    num_runs = 30
+    num_runs = 10
     amy_responses = np.zeros((num_runs, num_trials))
     p_cell_activities = np.zeros((num_runs, num_trials))
     i_cell_activities = np.zeros((num_runs, num_trials))
@@ -227,7 +227,7 @@ def amy_show_fear_extinction_AA():
     for run in range(num_runs):
         print("Run", run)
         model = AmygdalaEngrams()
-        online_learning(model, 2000)
+        online_learning(model, 1000)
         amy_transition_phase(model, Phase.PERCEPTION)
 
         cntx_A = gen_random_simple_pattern(model.SENSORY_CORTEX.N, model.SENSORY_CORTEX.num_hcs)
@@ -285,7 +285,7 @@ def amy_show_fear_extinction_AA():
     axes[0].set_title("P-cell activity", fontsize=22)
     axes[0].set_xlabel("")
     axes[0].set_ylabel(r"% cells active", fontsize=22)
-    axes[0].set_ylim(-0.01, 0.091)
+    axes[0].set_ylim(-0.01, 0.071)
     axes[0].axvline(x=num_acquisition_trials, color='grey', linestyle='--', alpha=0.5)
     axes[0].set_xticks([])
     axes[0].set_xticklabels([])
@@ -298,7 +298,7 @@ def amy_show_fear_extinction_AA():
     axes[1].set_title("I-cell activity", fontsize=22)
     axes[1].set_xlabel("")
     axes[1].set_ylabel(r"% cells active", fontsize=22)
-    axes[1].set_ylim(-0.01, 0.091)
+    axes[1].set_ylim(-0.01, 0.071)
     axes[1].axvline(x=num_acquisition_trials, color='grey', linestyle='--', alpha=0.5)
     axes[1].set_xticks([])
     axes[1].set_xticklabels([])
@@ -401,7 +401,7 @@ def amy_show_fear_extinction_AB():
     plt.show()
 
 def amy_show_fear_renewal_ABA():
-    num_runs = 3
+    num_runs = 10
     num_acquisition_trials = 20
     num_extinction_trials =  100
     num_renewal_trials = 100
@@ -412,12 +412,12 @@ def amy_show_fear_renewal_ABA():
     for run in range(num_runs):
 
         model = AmygdalaEngrams()
-        online_learning(model, 1000)
+        online_learning(model, 2000)
 
         cntx_A = gen_random_simple_pattern(model.SENSORY_CORTEX.N, model.SENSORY_CORTEX.num_hcs)
         cntx_A_vec = np.array([cntx_A[i] for i in cntx_A.keys()])
 
-        B_overlap = 0.85
+        B_overlap = 0.8
         B_diff = 1 - B_overlap
         hcs_to_change = int(model.SENSORY_CORTEX.num_hcs * B_diff)
         units_to_change = hcs_to_change * model.SENSORY_CORTEX.units_per_hc
@@ -468,7 +468,59 @@ def amy_show_fear_renewal_ABA():
         amy_transition_phase(model, Phase.SLEEP)
         for i in range(sleep_len):
             model.update()
+
         for i in range(num_renewal_trials):
+
+            ba_n_activity = model.BA_N.log[model.BA_N.current_step-1]
+            active_ban_cells_A_1 = [i for i in range(len(ba_n_activity)) if ba_n_activity[i] == 1]
+
+            ba_n_to_p_connections = model.BA_P.feedback_connections['BA_N']
+            W = ba_n_to_p_connections.W # (N_BAN, N_BAP)
+
+            # For each P-cell, compute sum of weights from active BA(N) cells
+            sums_of_weights = np.sum(W[active_ban_cells_A_1, :], axis=0)
+
+            # Plot histogram of sums of weights
+            if i == 0 and run == 0:
+                print(sums_of_weights)
+                fig, ax = plt.subplots(figsize=(9, 9))
+                plt.hist(sums_of_weights, bins=np.arange(0, 40, 2))
+                ax.axvline(x=np.exp(model.BA_P.firing_threshold), color='red', linestyle='--')
+                plt.title("Context. A - Before Sleep", fontsize=24)
+                plt.xlabel("Summed weight", fontsize=22)
+                plt.ylabel("Frequency", fontsize=22)
+                ax.tick_params(labelsize=22)
+                # use log scale for y-axis
+                plt.yscale('log')
+                plt.yticks([1, 10, 100])
+                plt.ylim(0.5, 250)
+                plt.show()
+
+            ba_n_activity = model.BA_N.log[model.BA_N.current_step-1]
+            active_ban_cells_A_1 = [i for i in range(len(ba_n_activity)) if ba_n_activity[i] == 1]
+
+            ba_n_to_p_connections = model.BA_I.feedback_connections['BA_N']
+            W = ba_n_to_p_connections.W # (N_BAN, N_BAP)
+
+            # For each P-cell, compute sum of weights from active BA(N) cells
+            sums_of_weights = np.sum(W[active_ban_cells_A_1, :], axis=0)
+
+            # Plot histogram of sums of weights
+            if i == 0 and run == 0:
+                print(sums_of_weights)
+                fig, ax = plt.subplots(figsize=(9, 9))
+                plt.hist(sums_of_weights, bins=np.arange(0, 100, 2))
+                ax.axvline(x=np.exp(model.BA_I.firing_threshold), color='red', linestyle='--')
+                plt.title("Context. A - Before Sleep", fontsize=24)
+                plt.xlabel("Summed weight", fontsize=22)
+                plt.ylabel("Frequency", fontsize=22)
+                ax.tick_params(labelsize=22)
+                # use log scale for y-axis
+                plt.yscale('log')
+                plt.yticks([1, 10, 100])
+                plt.ylim(0.5, 250)
+                plt.show()
+
             amy_transition_phase(model, Phase.PERCEPTION)
             model.update(cntx_A, 0.0)
             pattern_converged_to_amy = model.AMY_C.log[model.AMY_C.current_step-1]
@@ -521,7 +573,7 @@ def amy_show_fear_renewal_ABA():
     plt.show()
 
 def amy_show_fear_renewal_ABC():
-    num_runs = 3
+    num_runs = 5
     num_acquisition_trials = 20
     num_extinction_trials = 100
     num_renewal_trials = 100
@@ -536,7 +588,7 @@ def amy_show_fear_renewal_ABC():
         cntx_A = gen_random_simple_pattern(model.SENSORY_CORTEX.N, model.SENSORY_CORTEX.num_hcs)
         cntx_A_vec = np.array([cntx_A[i] for i in cntx_A.keys()])
 
-        B_overlap = 0.85
+        B_overlap = 0.8
         B_diff = 1 - B_overlap
         hcs_to_change = int(model.SENSORY_CORTEX.num_hcs * B_diff)
         units_to_change = hcs_to_change * model.SENSORY_CORTEX.units_per_hc
@@ -969,7 +1021,7 @@ def amy_show_fear_renewal_ABC_BC_sim():
     plt.show()
 
 def amy_show_fear_renewal_AAB():
-    num_runs = 3
+    num_runs = 5
     num_acquisition_trials = 20
     num_extinction_trials = 100
     num_renewal_trials = 100
@@ -979,12 +1031,12 @@ def amy_show_fear_renewal_AAB():
     for run in range(num_runs):
 
         model = AmygdalaEngrams()
-        online_learning(model, 1000)
+        online_learning(model, 2000)
 
         cntx_A = gen_random_simple_pattern(model.SENSORY_CORTEX.N, model.SENSORY_CORTEX.num_hcs)
         cntx_A_vec = np.array([cntx_A[i] for i in cntx_A.keys()])
 
-        B_overlap = 0.85
+        B_overlap = 0.8
         B_diff = 1 - B_overlap
         hcs_to_change = int(model.SENSORY_CORTEX.num_hcs * B_diff)
         units_to_change = hcs_to_change * model.SENSORY_CORTEX.units_per_hc
@@ -1055,7 +1107,7 @@ def amy_show_generalization_consolidation():
     delay_context_len = 25
     perception_phase_len = perceptions_per_day * delay_context_len
 
-    num_runs = 30
+    num_runs = 10
     amy_responses_A_dict = {i: np.zeros(1 + num_delay_days) for i in range(num_runs)}
     amy_responses_B_dict = {i: np.zeros(1 + num_delay_days) for i in range(num_runs)}
     amy_responses_C_dict = {i: np.zeros(1 + num_delay_days) for i in range(num_runs)}
@@ -1066,11 +1118,11 @@ def amy_show_generalization_consolidation():
     for run in range(num_runs):
         print("Run:", run)
         model = AmygdalaEngrams()
-        online_learning(model, 1000)
+        online_learning(model, 2000)
 
         cntx_A = gen_random_simple_pattern(model.SENSORY_CORTEX.N, model.SENSORY_CORTEX.num_hcs)
 
-        B_overlap = 0.5
+        B_overlap = 0.6
         B_diff = 1 - B_overlap
         hcs_to_change = int(model.SENSORY_CORTEX.num_hcs * B_diff)
         units_to_change = hcs_to_change * model.SENSORY_CORTEX.units_per_hc
@@ -1150,7 +1202,7 @@ def amy_show_generalization_consolidation():
             amy_transition_phase(model, Phase.PERCEPTION)
             for _ in range(3):
                 cntx_random = gen_random_simple_pattern(model.SENSORY_CORTEX.N, model.SENSORY_CORTEX.num_hcs)
-                us_random = 0.8 * np.random.beta(1.25, 3)
+                us_random = 0.9 * np.random.beta(1.25, 5)
                 print("Random US:", us_random)
                 for _ in range(delay_context_len):
                     model.update(cntx_random, us_random)
@@ -1542,12 +1594,12 @@ def air_puff():
 
 def amy_show_fear_learning():
     num_days = 21 # 39
-    perceptions_per_day = 3
-    avg_perception_len = 20
+    perceptions_per_day = 4
+    avg_perception_len = 30
     perception_phase_len = perceptions_per_day * avg_perception_len
     sleep_len = 165 # 165
 
-    num_runs = 1
+    num_runs = 10
     agg_remembered_pattern_count_ctx = {i: [] for i in range(num_days)}
     agg_remembered_pattern_count_hip = {i: [] for i in range(num_days)}
     agg_remembered_pattern_count_ban = {i: [] for i in range(num_days)}
@@ -1685,6 +1737,8 @@ def amy_show_fear_learning():
     # Draw horizontal line at 0.5
     plt.axhline(y=0.5, color='grey', linestyle='--', alpha=0.5)
     plt.xlabel("Memory age (days)", fontsize=22)
+    # xticks at 0, 5, 10, 15, 20
+    plt.xticks([0, 5, 10, 15, 20], fontsize=18)
     # plt.gca().invert_xaxis()
     plt.ylabel(r'% patterns recalled', fontsize=22)
     plt.ylim(0, 1)
@@ -2251,7 +2305,7 @@ def amy_sleep_disruption_chronic():
     sleep_omitted_fracs = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
     num_days = 7
     contexts_per_day = 10
-    num_simulations = 25
+    num_simulations = 1
     cem_responses = {n: [] for n in sleep_omitted_fracs}
     first_step_cem_responses = {n: [] for n in sleep_omitted_fracs}
     net_weights = {n: [] for n in sleep_omitted_fracs}
@@ -2889,7 +2943,7 @@ def amy_show_engram_formation():
 
 def amy_show_sleep_replay():
     num_contexts = 10
-    perception_len = 35
+    perception_len = 30
     sleep_len = 165
     us_strength = 0.0
 
@@ -3375,29 +3429,46 @@ def amy_assess_fear_engram_overlap():
 
 if __name__ == "__main__":
 
-    # amy_show_fear_generalization()
-    # amy_show_fear_acquisition()
+    # Fig 4a) Engram formation
+    # amy_show_engram_formation()
+    # Fig 4b) Sleep replay
+    # amy_show_sleep_replay()
+    # Fig 4c) Recall performance over time
+    # amy_show_fear_learning()
+    # Fig 4d) Fear acquisition and extinction
     # amy_show_fear_extinction_AA()
-    # amy_show_fear_extinction_AB()
+
+    # Fig 5b) Generalization gradients
+    # amy_show_fear_generalization()
+    # Fig 5c) Fear renewal
     # amy_show_fear_renewal_ABA()
+    # amy_show_fear_renewal_ABC()
+    # amy_show_fear_renewal_AAB()
+    # Fig 5d) Increases in fear generalization with memory age
+    # amy_show_generalization_consolidation()
+
+    # Fig 6 Effect of sleep homeostasis on P-cell recruitment
+    # amy_show_p_cell_recruitment()
+
+    # Fig 7) Sleep deprivation
+    # amy_sleep_disruption_chronic()
+
+    # Fig 8a, b, d) SEFL protocol
+    # amy_sefl_synapse_sum()
+    # Fig 8c) SEFL reverse protocol
+    # amy_sefl_synapse_sum_reverse()
+
+    # Remaining protocols (not corresponding to figures of the main text)
+    # amy_show_fear_acquisition()
+    # amy_show_fear_extinction_AB()
     # amy_show_fear_renewal_ABCDA()
     # amy_show_fear_renewal_ABCDA_same_overlap()
-    # amy_show_fear_renewal_ABC()
     # amy_show_fear_renewal_ABC_BC_sim()
-    # amy_show_fear_renewal_AAB()
-    # amy_show_generalization_consolidation()
     # amy_within_session_extinction()
     # amy_show_fear_acquisition_daily_ABC()
-    amy_show_fear_learning()
     # amy_sefl_protocol()
-    # amy_sefl_synapse_sum()
     # amy_sefl_reverse()
-    # amy_sefl_synapse_sum_reverse()
     # amy_show_delayed_extinction()
     # amy_show_immediate_extinction()
-    # amy_show_engram_formation()
-    # amy_show_sleep_replay()
     # amy_show_recruitability()
-    # amy_show_p_cell_recruitment()
     # amy_assess_fear_engram_overlap()
-    # amy_sleep_disruption_chronic()

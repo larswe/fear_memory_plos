@@ -38,13 +38,13 @@ inf = 999999999999999 # A very large number, used as a learning time constant fo
 
 class AmygdalaEngrams:
 
-    def __init__(self, background_activity=0.025, dt=10, maintenance_rate=0.05):
+    def __init__(self, background_activity=0.025, dt=10):
 
         # Default parameter values, used to make the model switch between phases.
         self.default_parameters = {
             Phase.PERCEPTION: {
                 'EC_IN': {'firing_threshold': 0.99},
-                'HIP': {'tau_L': 450, 'g_L': 0, 'tau_A': inf, 'g_A': 0.0},
+                'HIP': {'tau_L': 350, 'g_L': 0, 'tau_A': inf, 'g_A': 0.0},
                 'EC_OUT': {'firing_threshold': 0.99},
                 'CTX': {'tau_L': 32000, 'g_L': 0},
                 'AMY_C': {'center': 8.0, 'slope': 0.3},
@@ -64,16 +64,16 @@ class AmygdalaEngrams:
                         'CTX': {'fb_gain': 0.0, 'fb_gain_base': 0.0, 'tau_fb': inf, 'tau_fb_fast': 1000, 'tau_fb_slow': inf}
                     },
                     'BA_P': {
-                        'BA_N': {'fb_gain': 1.0, 'tau_fb_fast': 500, 'tau_fb_slow': inf, 'tau_fb': inf}
+                        'BA_N': {'fb_gain': 1.0, 'tau_fb_fast': 1000, 'tau_fb_slow': inf, 'tau_fb': inf}
                     },
                     'BA_I': {
-                        'BA_N': {'fb_gain': 1.0, 'tau_fb_fast': 1500, 'tau_fb_slow': inf, 'tau_fb': inf}
+                        'BA_N': {'fb_gain': 1.0, 'tau_fb_fast': 2500, 'tau_fb_slow': inf, 'tau_fb': inf}
                     }
                 }
             },
             Phase.SLEEP: {
                 'EC_IN': {'firing_threshold': 0.75},
-                'HIP': {'tau_L': inf, 'g_L': 1.05, 'tau_A': 800, 'g_A': -0.8},
+                'HIP': {'tau_L': inf, 'g_L': 1.0, 'tau_A': 1200, 'g_A': -0.85},
                 'EC_OUT': {'firing_threshold': 2.75},
                 'CTX': {'tau_L': 26000, 'g_L': 0},
                 'AMY_C': {'center': 8.0, 'slope': 0.3},
@@ -106,7 +106,7 @@ class AmygdalaEngrams:
                 'EC_OUT': {'firing_threshold': 2.75},
                 'CTX': {'tau_L': inf, 'g_L': 1},
                 'AMY_C': {'center': 8.0, 'slope': 0.3},
-                'BA_N': {'tau_L_slow': inf, 'tau_L_fast': inf, 'tau_L': inf, 'g_L': 0.15},
+                'BA_N': {'tau_L_slow': inf, 'tau_L_fast': inf, 'tau_L': inf, 'g_L': 0.05},
                 'BA_P': {'firing_threshold': 3.05},
                 'BA_I': {'firing_threshold': 4.35},
                 'FB': {
@@ -144,16 +144,16 @@ class AmygdalaEngrams:
         self.validity_score = 0.0 # Whether EC_IN pattern matches EC_OUT pattern
         self.B_amy = 0.5 # Threshold above which HIP determines AMY activity
 
-        self.maintenance_rate = maintenance_rate
+        self.maintenance_rate = 0.005
 
         # AMY parameters for within-session extinction
         self.tau_within = 250 # Time constant for within-session extinction
         self.Lambda_AMY_U_default = 0.3
         self.Lambda_AMY_U = self.Lambda_AMY_U_default # Range (0, 1)
 
-        self.A_thresh = 0.9 # Threshold below which "extreme stress effect" is activated (SEFL)
-        self.T_ext_P_min = 0.015
-        self.T_ext_P_default = 0.12
+        self.A_thresh = 0.9 # Threshold at which "extreme stress effect" is activated (SEFL)
+        self.T_ext_P_min = 0.10
+        self.T_ext_P_default = 0.20
         self.T_ext_P_recovery = 1/20000.0
         self.T_ext_P = self.T_ext_P_default
         self.P_rec_norm_default = 2.0
@@ -163,11 +163,11 @@ class AmygdalaEngrams:
 
         self.SENSORY_CORTEX = BCPNNOptimized(self, 50, 10, 0.1, None, None, None, None, None)
         self.EC_IN = BinaryModule(self, 500, 0.75)
-        self.HIP = kWTAOptimized(self, 350, 0.04, 400, 1, 400, -0.8, 0.1)
+        self.HIP = kWTAOptimized(self, 350, 0.04, 400, 1, 400, -0.8, recall_detect_thrsh=0.15)
         self.EC_OUT = BinaryModule(self, 500, 0.75)
-        self.CTX = BCPNNOptimized(self, 50, 10, 0.1, 18500, 1, None, None, 0.2)
+        self.CTX = BCPNNOptimized(self, 50, 10, 0.1, 18500, 1, None, None, recall_detect_thrsh=0.15)
         # Amygdala
-        self.BA_N = kWTAOptimized(self, 500, 0.1, 100000, 1, None, None, 0.15)
+        self.BA_N = kWTAOptimized(self, 500, 0.1, 100000, 1, None, None, recall_detect_thrsh=0.15)
         self.BA_P = BinaryModule(self, 250, 2.5)
         self.BA_I = BinaryModule(self, 250, 3.5)
         self.AMY_C = ThresholdCell(self, center=6.0, slope=0.05)
@@ -414,7 +414,7 @@ class AmygdalaEngrams:
         # Prepare amygdala learning
         #if self.phase == Phase.PERCEPTION:
         #    print("Prediction error: ", prediction_error)
-        if prediction_error > 0.4 or prediction_error < -0.2:
+        if prediction_error > 0.3 or prediction_error < -0.3:
             self.BA_N.tau_L = self.BA_N.tau_L_fast
             self.BA_N.feedback_connections['HIP'].tau_fb = self.BA_N.feedback_connections['HIP'].tau_fb_fast
             self.BA_N.feedback_connections['CTX'].tau_fb = self.BA_N.feedback_connections['CTX'].tau_fb_fast
@@ -466,12 +466,10 @@ class AmygdalaEngrams:
         
         if self.phase == Phase.SLEEP:
             
-            maintenance_rate = 0.015 # 0.05
-            self.maintenance_rate = maintenance_rate
-            recruitment_level_P = 0.22
+            recruitment_level_P = 0.45
             extinction_threshold_P = self.T_ext_P
 
-            ba_active_mask = np.array([self.BA_N.output[i] > 0.5 for i in range(self.BA_N.N)]) # NOTE: That's a very low threshold. trivial.
+            ba_active_mask = np.array([self.BA_N.output[i] > 0.5 for i in range(self.BA_N.N)])
             ba_p_feedback = self.BA_P.feedback_connections['BA_N']
             ba_p_W = ba_p_feedback.W # shape (#N, #P)
             ba_p_W_active = ba_p_W[ba_active_mask, :] # shape (#active N, #P)
@@ -482,10 +480,8 @@ class AmygdalaEngrams:
             self.BA_P.feedback_connections['BA_N'].adjust_Lambda_conn()
 
             # Do the same for I-cells
-            I_maintenance_rate = 0.015
-            self.maintenance_rate = I_maintenance_rate
-            recruitment_level_I = 0.8
-            extinction_threshold_I = 0.625
+            recruitment_level_I = 2.0
+            extinction_threshold_I = 1.5
 
             ba_i_feedback = self.BA_I.feedback_connections['BA_N']
             ba_i_W = ba_i_feedback.W # shape (#N, #I)

@@ -22,11 +22,11 @@ class FeedbackConnection:
         self.lambda_0 = self.source.model.lambda_0 if bespoke_lambda_0 is None else bespoke_lambda_0
 
         # Initialization of synaptic weights and activity estimates
-        lambda_0_init = 0.11 # NOTE: We use this hard-coded value for the initialization of BAN->BAP and BAN->BAI synapse weights. This is done purely for historical reasons related to model tuning.
+        lambda_0_init = 0.05
         self.W = 0.01 + 0.07 * np.random.beta(1, 5, size=(source.N, target.N))
         self.Lambda_unit_source = lambda_0_init * np.ones(source.N)
         self.Lambda_unit_target = lambda_0_init * np.ones(target.N)
-        self.Lambda_conn = (lambda_0_init ** 2) * np.zeros((source.N, target.N))
+        self.adjust_Lambda_conn() # Adjust Lambda_conn to match W
 
         self.bias_target = np.log(self.Lambda_unit_target)
 
