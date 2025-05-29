@@ -43,9 +43,9 @@ class AmygdalaEngrams:
         # Default parameter values, used to make the model switch between phases.
         self.default_parameters = {
             Phase.PERCEPTION: {
-                'EC_IN': {'firing_threshold': 0.99},
+                'EC_IN': {'firing_threshold': 0.75},
                 'HIP': {'tau_L': 350, 'g_L': 0, 'tau_A': inf, 'g_A': 0.0},
-                'EC_OUT': {'firing_threshold': 0.99},
+                'EC_OUT': {'firing_threshold': 2.75},
                 'CTX': {'tau_L': 32000, 'g_L': 0},
                 'AMY_C': {'center': 8.0, 'slope': 0.3},
                 'BA_N': {'tau_L_slow': 40000, 'tau_L_fast': 1000, 'tau_L': 40000, 'g_L': 0.0},
